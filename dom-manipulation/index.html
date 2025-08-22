@@ -2,29 +2,15 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Dynamic Quote Generator</title>
 </head>
 <body>
   <h1>Dynamic Quote Generator</h1>
-
-  <!-- Quote Display Section -->
   <div id="quoteDisplay"></div>
   <button id="newQuote">Show New Quote</button>
 
-  <!-- Add New Quote Section -->
-  <div>
-    <input id="newQuoteText" type="text" placeholder="Enter a new quote" />
-    <input id="newQuoteCategory" type="text" placeholder="Enter quote category" />
-    <button id="addQuoteBtn">Add Quote</button>
-  </div>
-
-  <!-- Dynamic Category Filter -->
-  <div>
-    <label for="categorySelect">Choose Category:</label>
-    <select id="categorySelect"></select>
-  </div>
-
+  <!-- All other UI (category filter + add-quote form) is injected by script.js -->
   <script src="script.js"></script>
 </body>
 </html>
