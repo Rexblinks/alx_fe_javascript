@@ -25,16 +25,18 @@
   <button id="exportQuotes">Export Quotes (JSON)</button>
   <input type="file" id="importFile" accept=".json" />
 
-  <!-- Category Filtering Section -->
+  <!-- Category Filter -->
   <h2>Filter Quotes</h2>
   <select id="categoryFilter" onchange="filterQuotes()">
     <option value="all">All Categories</option>
-    <!-- JavaScript will add categories here -->
   </select>
-
   <div id="filteredQuotes"></div>
 
-  <!-- Script -->
+  <!-- Server Sync Section (Task 4) -->
+  <h2>Sync with Server</h2>
+  <button id="syncQuotes">Sync Now</button>
+  <div id="syncStatus"></div>
+
   <script src="script.js"></script>
 </body>
 </html>

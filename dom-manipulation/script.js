@@ -5,6 +5,9 @@
   const STORAGE_KEY = 'dqg_quotes_v1';
   const FILTER_KEY = 'dqg_last_filter';
 
+  const SERVER_URL = 'https://jsonplaceholder.typicode.com/posts'; // mock API
+  const syncStatus = document.getElementById("syncStatus");
+
   const defaultQuotes = [
     { text: "The only limit to our realization of tomorrow is our doubts of today.", category: "Motivation" },
     { text: "Simplicity is the soul of efficiency.", category: "Productivity" },
@@ -40,6 +43,7 @@
   const newQuoteBtn = document.getElementById('newQuote');
   const categoryFilter = document.getElementById('categoryFilter');
   const filteredQuotesDiv = document.getElementById('filteredQuotes');
+  const syncBtn = document.getElementById('syncQuotes');
 
   // ---------- State ----------
   let quotes = loadQuotes();
@@ -90,9 +94,7 @@
     quotes.push({ text, category });
     saveQuotes(quotes);
 
-    // update filter dropdown
     renderCategoryOptions(categoryFilter, true);
-
     alert("Quote added!");
     document.getElementById('newQuoteText').value = "";
     document.getElementById('newQuoteCategory').value = "";
@@ -102,7 +104,6 @@
   function populateCategories() {
     renderCategoryOptions(categoryFilter, true);
 
-    // restore last filter if exists
     const selectedCategory = loadFilterPreference();
     categoryFilter.value = selectedCategory;
     filterQuotes();
@@ -159,13 +160,48 @@
     reader.readAsText(file);
   }
 
+  // ---------- Server Sync Simulation ----------
+  async function syncWithServer() {
+    syncStatus.textContent = "Syncing with server...";
+
+    try {
+      // Fetch data from "server"
+      const res = await fetch(SERVER_URL);
+      const serverData = await res.json();
+
+      // Simulate server quotes (use first 5 posts as fake quotes)
+      const serverQuotes = serverData.slice(0, 5).map(item => ({
+        text: item.title,
+        category: "Server"
+      }));
+
+      // Conflict resolution: server wins
+      const mergedQuotes = [...quotes, ...serverQuotes];
+      const uniqueQuotes = Array.from(new Map(mergedQuotes.map(q => [q.text, q])).values());
+
+      quotes = uniqueQuotes;
+      saveQuotes(quotes);
+
+      renderCategoryOptions(categoryFilter, true);
+      filterQuotes();
+
+      syncStatus.textContent = "✅ Sync complete (server data merged)";
+    } catch (err) {
+      syncStatus.textContent = "❌ Sync failed: " + err.message;
+    }
+  }
+
   // ---------- Init ----------
   newQuoteBtn.addEventListener("click", showRandomQuote);
   document.querySelector("form").addEventListener("submit", addQuote);
   document.getElementById("exportQuotes").addEventListener("click", exportToJsonFile);
   document.getElementById("importFile").addEventListener("change", importFromJsonFile);
+  syncBtn.addEventListener("click", syncWithServer);
 
   populateCategories();
   showRandomQuote();
+
+  // Auto sync every 60 seconds
+  setInterval(syncWithServer, 60000);
 
 })();
