@@ -4,8 +4,8 @@
 
   const STORAGE_KEY = 'dqg_quotes_v1';
   const FILTER_KEY = 'dqg_last_filter';
+  const SERVER_URL = 'https://jsonplaceholder.typicode.com/posts'; // Mock API
 
-  const SERVER_URL = 'https://jsonplaceholder.typicode.com/posts'; // mock API
   const syncStatus = document.getElementById("syncStatus");
 
   const defaultQuotes = [
@@ -161,21 +161,34 @@
   }
 
   // ---------- Server Sync Simulation ----------
-  async function syncWithServer() {
+  async function fetchQuotesFromServer() {
+    const res = await fetch(SERVER_URL);
+    const data = await res.json();
+
+    // Simulate server quotes (take first 5 posts)
+    return data.slice(0, 5).map(item => ({
+      text: item.title,
+      category: "Server"
+    }));
+  }
+
+  async function postQuoteToServer(quote) {
+    // Simulate posting a new quote
+    const res = await fetch(SERVER_URL, {
+      method: "POST",
+      body: JSON.stringify(quote),
+      headers: { "Content-type": "application/json; charset=UTF-8" }
+    });
+    return res.json();
+  }
+
+  async function syncQuotes() {
     syncStatus.textContent = "Syncing with server...";
 
     try {
-      // Fetch data from "server"
-      const res = await fetch(SERVER_URL);
-      const serverData = await res.json();
+      const serverQuotes = await fetchQuotesFromServer();
 
-      // Simulate server quotes (use first 5 posts as fake quotes)
-      const serverQuotes = serverData.slice(0, 5).map(item => ({
-        text: item.title,
-        category: "Server"
-      }));
-
-      // Conflict resolution: server wins
+      // Conflict resolution: server data wins
       const mergedQuotes = [...quotes, ...serverQuotes];
       const uniqueQuotes = Array.from(new Map(mergedQuotes.map(q => [q.text, q])).values());
 
@@ -196,12 +209,12 @@
   document.querySelector("form").addEventListener("submit", addQuote);
   document.getElementById("exportQuotes").addEventListener("click", exportToJsonFile);
   document.getElementById("importFile").addEventListener("change", importFromJsonFile);
-  syncBtn.addEventListener("click", syncWithServer);
+  syncBtn.addEventListener("click", syncQuotes);
 
   populateCategories();
   showRandomQuote();
 
   // Auto sync every 60 seconds
-  setInterval(syncWithServer, 60000);
+  setInterval(syncQuotes, 60000);
 
 })();
