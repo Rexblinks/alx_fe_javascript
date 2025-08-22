@@ -1,6 +1,4 @@
 // script.js
-// Dynamic Quote Generator with DOM manipulation + Web Storage + JSON Import/Export + Category Filtering
-
 (() => {
   'use strict';
 
@@ -29,8 +27,8 @@
     localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
   }
 
-  function saveFilterPreference(category) {
-    localStorage.setItem(FILTER_KEY, category);
+  function saveFilterPreference(selectedCategory) {
+    localStorage.setItem(FILTER_KEY, selectedCategory);
   }
 
   function loadFilterPreference() {
@@ -105,18 +103,18 @@
     renderCategoryOptions(categoryFilter, true);
 
     // restore last filter if exists
-    const lastFilter = loadFilterPreference();
-    categoryFilter.value = lastFilter;
+    const selectedCategory = loadFilterPreference();
+    categoryFilter.value = selectedCategory;
     filterQuotes();
   }
 
   function filterQuotes() {
-    const selected = categoryFilter.value;
+    const selectedCategory = categoryFilter.value;
     filteredQuotesDiv.innerHTML = "";
 
-    let filtered = (selected === "all")
+    let filtered = (selectedCategory === "all")
       ? quotes
-      : quotes.filter(q => q.category === selected);
+      : quotes.filter(q => q.category === selectedCategory);
 
     if (filtered.length === 0) {
       filteredQuotesDiv.textContent = "No quotes in this category.";
@@ -124,7 +122,7 @@
       filtered.forEach(q => renderQuote(q, filteredQuotesDiv));
     }
 
-    saveFilterPreference(selected);
+    saveFilterPreference(selectedCategory);
   }
 
   // ---------- JSON Export ----------
