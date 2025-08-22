@@ -1,5 +1,5 @@
 // script.js
-// Dynamic Quote Generator with advanced DOM manipulation (no frameworks)
+// Dynamic Quote Generator with advanced DOM manipulation + Web Storage + JSON Import/Export
 
 (() => {
   'use strict';
@@ -34,7 +34,21 @@
     localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
   }
 
-  // Normalize category for sorting comparisons (but keep original case for display)
+  // ---------- Session Storage for last viewed quote ----------
+  function saveLastViewedQuote(quote) {
+    sessionStorage.setItem("lastViewedQuote", JSON.stringify(quote));
+  }
+
+  function loadLastViewedQuote() {
+    try {
+      const data = sessionStorage.getItem("lastViewedQuote");
+      if (!data) return null;
+      return JSON.parse(data);
+    } catch {
+      return null;
+    }
+  }
+
   function sortCategories(a, b) {
     return a.toLowerCase().localeCompare(b.toLowerCase());
   }
@@ -47,11 +61,10 @@
     throw new Error("Missing #quoteDisplay or #newQuote in index.html");
   }
 
-  // Make quote area screen-reader friendly
   quoteDisplay.setAttribute('role', 'status');
   quoteDisplay.setAttribute('aria-live', 'polite');
 
-  // Inject a controls bar before the New Quote button
+  // Inject category select
   const controls = document.createElement('div');
   controls.id = 'controls';
   controls.style.display = 'flex';
@@ -60,7 +73,6 @@
   controls.style.alignItems = 'center';
   newQuoteBtn.parentNode.insertBefore(controls, newQuoteBtn);
 
-  // Category filter (label + select) created dynamically
   const categoryLabel = document.createElement('label');
   categoryLabel.textContent = 'Category: ';
   categoryLabel.setAttribute('for', 'categorySelect');
@@ -72,13 +84,13 @@
   controls.appendChild(categoryLabel);
   controls.appendChild(categorySelect);
 
-  // Where we'll mount the add-quote form
+  // Mount point for form
   const formMount = document.createElement('div');
   formMount.id = 'formMount';
   formMount.style.marginTop = '1rem';
   newQuoteBtn.insertAdjacentElement('afterend', formMount);
 
-  // A <template> lets us stamp out quote cards quickly
+  // Quote template
   const quoteTemplate = document.createElement('template');
   quoteTemplate.id = 'quoteTemplate';
   quoteTemplate.innerHTML = `
@@ -89,7 +101,7 @@
   `;
   document.body.appendChild(quoteTemplate);
 
-  // Minimal styles for clarity (purely optional)
+  // Minimal styles
   const style = document.createElement('style');
   style.textContent = `
     .quote-card { padding: 1rem; border: 1px solid #ddd; border-radius: 8px; max-width: 60ch; }
@@ -115,7 +127,6 @@
 
   function renderCategoryOptions() {
     const fragment = document.createDocumentFragment();
-
     const allOpt = document.createElement('option');
     allOpt.value = 'all';
     allOpt.textContent = 'All categories';
@@ -128,7 +139,6 @@
       fragment.appendChild(opt);
     }
 
-    // Replace options atomically
     categorySelect.replaceChildren(fragment);
   }
 
@@ -140,7 +150,6 @@
     block.textContent = “${quote.text}”;
     meta.textContent = Category: ${quote.category};
 
-    // Data attribute for future extensibility
     const card = clone.querySelector('.quote-card');
     card.dataset.category = quote.category;
 
@@ -157,7 +166,6 @@
       return;
     }
 
-    // Avoid immediate repeat within the same category
     let idx;
     if (category === lastShown.category && pool.length > 1) {
       do { idx = Math.floor(Math.random() * pool.length); }
@@ -166,8 +174,12 @@
       idx = Math.floor(Math.random() * pool.length);
     }
 
-    renderQuote(pool[idx]);
+    const selected = pool[idx];
+    renderQuote(selected);
     lastShown = { category, index: idx };
+
+    // Save to sessionStorage
+    saveLastViewedQuote(selected);
   }
 
   function createAddQuoteForm() {
@@ -185,13 +197,10 @@
       <output id="formMessage" aria-live="polite"></output>
     `;
 
-    // Event delegation on the form
     form.addEventListener('submit', addQuote);
-
     formMount.replaceChildren(form);
   }
 
-  // Make required functions available globally for graders/tests
   window.showRandomQuote = showRandomQuote;
   window.createAddQuoteForm = createAddQuoteForm;
 
@@ -210,7 +219,6 @@
       return;
     }
 
-    // Prevent exact duplicate (same text + category)
     const exists = quotes.some(q =>
       q.text.toLowerCase() === text.toLowerCase() &&
       q.category.toLowerCase() === category.toLowerCase()
@@ -224,7 +232,6 @@
     quotes.push(newQ);
     saveQuotes(quotes);
 
-    // Update categories and keep selection
     const previouslySelected = categorySelect.value || 'all';
     renderCategoryOptions();
     if (![...categorySelect.options].some(o => o.value === previouslySelected)) {
@@ -241,13 +248,57 @@
     lastShown = { category: 'all', index: -1 };
   }
 
-  // Also expose an 'addQuote' for environments that expect onclick="addQuote()"
   window.addQuote = function() {
     const form = document.querySelector('form.add-quote');
     if (!form) return;
     const ev = new Event('submit', { cancelable: true, bubbles: true });
     form.dispatchEvent(ev);
   };
+
+  // ---------- JSON Export ----------
+  function exportToJsonFile() {
+    const dataStr = JSON.stringify(quotes, null, 2);
+    const blob = new Blob([dataStr], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "quotes.json";
+    a.click();
+
+    URL.revokeObjectURL(url);
+  }
+
+  // ---------- JSON Import ----------
+  function importFromJsonFile(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const fileReader = new FileReader();
+    fileReader.onload = function(e) {
+      try {
+        const importedQuotes = JSON.parse(e.target.result);
+        if (!Array.isArray(importedQuotes)) throw new Error("Invalid JSON structure");
+
+        for (const q of importedQuotes) {
+          if (q.text && q.category) {
+            const exists = quotes.some(
+              existing => existing.text.toLowerCase() === q.text.toLowerCase() &&
+                          existing.category.toLowerCase() === q.category.toLowerCase()
+            );
+            if (!exists) quotes.push(q);
+          }
+        }
+
+        saveQuotes(quotes);
+        renderCategoryOptions();
+        alert("Quotes imported successfully!");
+      } catch (err) {
+        alert("Failed to import quotes: " + err.message);
+      }
+    };
+    fileReader.readAsText(file);
+  }
 
   // ---------- Wire up controls ----------
   newQuoteBtn.addEventListener('click', showRandomQuote);
@@ -256,6 +307,17 @@
   // ---------- Boot ----------
   renderCategoryOptions();
   createAddQuoteForm();
-  showRandomQuote();
+
+  // Restore last viewed quote from session if exists
+  const lastQuote = loadLastViewedQuote();
+  if (lastQuote) {
+    renderQuote(lastQuote);
+  } else {
+    showRandomQuote();
+  }
+
+  // Hook up import/export buttons
+  document.getElementById("exportQuotes").addEventListener("click", exportToJsonFile);
+  document.getElementById("importFile").addEventListener("change", importFromJsonFile);
 
 })();
