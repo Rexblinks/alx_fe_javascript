@@ -85,19 +85,23 @@
   }
 
   // ---------- Add Quote ----------
-  function addQuote(event) {
+  async function addQuote(event) {
     event.preventDefault();
     const text = document.getElementById('newQuoteText').value.trim();
     const category = document.getElementById('newQuoteCategory').value.trim();
     if (!text || !category) return alert("Please fill in both fields.");
 
-    quotes.push({ text, category });
+    const newQ = { text, category };
+    quotes.push(newQ);
     saveQuotes(quotes);
 
     renderCategoryOptions(categoryFilter, true);
     alert("Quote added!");
     document.getElementById('newQuoteText').value = "";
     document.getElementById('newQuoteCategory').value = "";
+
+    // Post to server too
+    await postQuoteToServer(newQ);
   }
 
   // ---------- Filtering ----------
@@ -173,11 +177,10 @@
   }
 
   async function postQuoteToServer(quote) {
-    // Simulate posting a new quote
     const res = await fetch(SERVER_URL, {
       method: "POST",
       body: JSON.stringify(quote),
-      headers: { "Content-type": "application/json; charset=UTF-8" }
+      headers: { "Content-Type": "application/json; charset=UTF-8" } // <-- FIXED casing
     });
     return res.json();
   }
